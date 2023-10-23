@@ -24,6 +24,7 @@ jobs:
           args: --release --out dist --find-interpreter
           sccache: 'true'
           manylinux: auto
+          before-script-linux: yum -y install perl-IPC-Cmd
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
