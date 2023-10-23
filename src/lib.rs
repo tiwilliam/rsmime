@@ -8,15 +8,16 @@ use openssl::stack::Stack;
 use openssl::x509::X509;
 
 pub fn _sign(cert_file: &str, key_file: &str, data_to_sign: &[u8]) -> Result<Vec<u8>, String> {
+    let certs = Stack::new()?;
+    
     let cert_data = std::fs::read(cert_file).map_err(|e| e.to_string())?;
     let key_data = std::fs::read(key_file).map_err(|e| e.to_string())?;
 
-    let cert = X509::from_pem(&cert_data).expect("Failed to load cert");
+    let cert = X509::from_pem(&cert_data)?;
     let pkey = pkey::PKey::from_rsa(Rsa::private_key_from_pem(&key_data).expect("Failed to load key")).unwrap();
-    let certs = Stack::new().expect("Failed to create stack");
 
-    let pkcs7 = Pkcs7::sign(cert.as_ref(), pkey.as_ref(), certs.as_ref(), data_to_sign, Pkcs7Flags::STREAM).expect("Failed to sign");
-    let encrypted = pkcs7.to_smime(data_to_sign, Pkcs7Flags::STREAM).expect("Failed to convert to string");
+    let pkcs7 = Pkcs7::sign(cert.as_ref(), pkey.as_ref(), certs.as_ref(), data_to_sign, Pkcs7Flags::STREAM)?;
+    let encrypted = pkcs7.to_smime(data_to_sign, Pkcs7Flags::STREAM)?;
 
     Ok(encrypted)
 }
