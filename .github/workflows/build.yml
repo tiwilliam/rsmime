@@ -29,6 +29,7 @@ jobs:
                 yum update -y && yum install -y perl-core openssl openssl-devel pkgconfig
             else
                 apt update -y && apt-get install -y libssl-dev openssl pkg-config
+            fi
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
