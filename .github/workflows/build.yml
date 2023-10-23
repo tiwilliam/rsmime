@@ -1,38 +1,29 @@
 name: Build
 
 on:
-  pull_request:
-  release:
-    types:
-      - released
-      - prereleased
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  macos:
-    runs-on: macos-latest
+  linux:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
+        target: [x86_64, x86, aarch64, armv7, s390x, ppc64le]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python }}
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-darwin
-      - name: Build
-        run: cargo build --release
-      - name: Build wheels - x86_64
+          python-version: '3.10'
+      - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
-          target: x86_64
-          args: -i python --release --out dist --sdist
-      - name: Build wheels - universal2
-        uses: PyO3/maturin-action@v1
-        with:
-          args: -i python --release --target universal2-apple-darwin --out dist
+          target: ${{ matrix.target }}
+          args: --release --out dist --find-interpreter
+          sccache: 'true'
+          manylinux: auto
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
@@ -43,73 +34,74 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
         target: [x64, x86]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python }}
+          python-version: '3.10'
           architecture: ${{ matrix.target }}
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - name: Build
-        run: cargo build --release
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: -i python --release --out dist --manifest-path cramjam-python/Cargo.toml
+          args: --release --out dist --find-interpreter
+          sccache: 'true'
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: dist
 
-  linux:
-    runs-on: ubuntu-latest
+  macos:
+    runs-on: macos-latest
     strategy:
       matrix:
-        python: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
-        target: [x86_64, i686]
+        target: [x86_64, aarch64]
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python }}
-        architecture: ${{ matrix.target }}
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-    - name: Build
-      run: cargo build --release
-    - name: Build Wheels
-      uses: PyO3/maturin-action@v1
-      with:
-        target: ${{ matrix.target }}
-        manylinux: auto
-        args: -i ${{ matrix.python }} --release --out dist
-    - name: Upload wheels
-      uses: actions/upload-artifact@v3
-      with:
-        name: wheels
-        path: dist
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist --find-interpreter
+          sccache: 'true'
+      - name: Upload wheels
+        uses: actions/upload-artifact@v3
+        with:
+          name: wheels
+          path: dist
 
-  linux-cross:
+  sdist:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
-        target: [aarch64, armv7, s390x, ppc64le]
     steps:
-    - uses: actions/checkout@v3
-    - name: Build Wheels
-      uses: PyO3/maturin-action@v1
-      with:
-        target: ${{ matrix.target }}
-        manylinux: auto
-        args: -i ${{ matrix.python }} --release --out dist
-    - name: Upload wheels
-      uses: actions/upload-artifact@v3
-      with:
-        name: wheels
-        path: dist
+      - uses: actions/checkout@v3
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+      - name: Upload sdist
+        uses: actions/upload-artifact@v3
+        with:
+          name: wheels
+          path: dist
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: [linux, windows, macos, sdist]
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: wheels
+      - name: Publish to PyPI
+        uses: PyO3/maturin-action@v1
+        env:
+          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        with:
+          command: upload
+          args: --non-interactive --skip-existing *
