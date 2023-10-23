@@ -1,0 +1,2 @@
+include pyproject.toml Cargo.toml smime.pyi
+recursive-include src *
