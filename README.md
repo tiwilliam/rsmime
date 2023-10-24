@@ -4,6 +4,10 @@ Rust powered Python package for signing data in S/MIME format
 
 ## Usage
 
+```
+pip install rsmime
+```
+
 ```py
 import rsmime
 
