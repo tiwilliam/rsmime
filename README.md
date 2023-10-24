@@ -8,7 +8,12 @@ Rust powered Python package for signing data in S/MIME format
 import rsmime
 
 raw_data = b'data to sign'
-signed_data = rsmime.sign('something.crt', 'something.key', raw_data)
+
+try:
+    signed_data = rsmime.sign(cert_file, key_file, raw_data)
+except rsmime.SignError as e:
+    print("Failed to sign:", e)
+
 print(signed_data)
 ```
 
