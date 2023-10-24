@@ -37,13 +37,8 @@ pub fn _sign(cert_file: &str, key_file: &str, data_to_sign: &[u8]) -> PyResult<V
 #[pyfunction]
 fn sign(cert_file: &str, key_file: &str, data_to_sign: Vec<u8>) -> PyResult<String> {
     match _sign(cert_file, key_file, &data_to_sign) {
-        Ok(signed_data) => {
-            match String::from_utf8(signed_data) {
-                Ok(signed_string) => Ok(signed_string),
-                Err(err) => Err(PyException::new_err(err))
-            }
-        },
-        Err(err) => Err(PyException::new_err(err.to_string())),
+        Ok(signed_data) => Ok(String::from_utf8(signed_data).expect("Failed to convert to string")),
+        Err(err) => Err(err),
     }
 }
 
