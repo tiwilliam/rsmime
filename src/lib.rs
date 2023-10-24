@@ -15,6 +15,10 @@ create_exception!(rsmime, SignError, PyException);
 
 pub fn _sign(cert_file: &str, key_file: &str, data_to_sign: &[u8]) -> PyResult<Vec<u8>> {
     let certs = Stack::new().expect("Failed to create stack");
+
+    if data_to_sign.is_empty() {
+        return Err(SignError::new_err("Cannot sign empty data"));
+    }
     
     let cert_data = std::fs::read(cert_file).map_err(|err| ReadCertificateError::new_err(err.to_string()))?;
     let key_data = std::fs::read(key_file).map_err(|err| ReadCertificateError::new_err(err.to_string()))?;
