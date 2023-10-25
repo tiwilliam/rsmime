@@ -5,6 +5,7 @@ build-backend = "maturin"
 [project]
 name = "rsmime"
 version = "0.4.1"
+description = "Rust powered package for signing data in S/MIME format"
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Development Status :: 3 - Alpha",
