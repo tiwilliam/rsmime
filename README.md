@@ -14,7 +14,7 @@ import rsmime
 raw_data = b'data to sign'
 
 try:
-    signed_data = rsmime.sign(cert_file, key_file, raw_data)
+    signed_data = rsmime.sign('some.crt', 'some.key', raw_data)
 except rsmime.SignError as e:
     print("Failed to sign:", e)
 

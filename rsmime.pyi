@@ -7,5 +7,8 @@ class LoadCertificateError(Exception):
 class SignError(Exception):
     ...
 
-def sign(cert_file: str, key_file: str, data_to_sign: bytes) -> str:
+def sign(cert_file: str, key_file: str, data_to_sign: bytes) -> bytes:
+    ...
+
+def verify(cert_file: str, data_to_verify: bytes, throw_on_expiry: bool = False) -> bytes:
     ...
