@@ -14,29 +14,28 @@ use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 
-create_exception!(rsmime, ReadCertificateError, PyException);
-create_exception!(rsmime, LoadCertificateError, PyException);
+create_exception!(rsmime, CertificateError, PyException);
 create_exception!(rsmime, SignError, PyException);
 create_exception!(rsmime, VerifyError, PyException);
 
 fn _sign(cert_file: &str, key_file: &str, data_to_sign: &[u8]) -> PyResult<Vec<u8>> {
-    let certs = Stack::new().expect("Failed to create stack");
+    let certs = Stack::new().unwrap();
 
     if data_to_sign.is_empty() {
         return Err(SignError::new_err("Cannot sign empty data"));
     }
 
     let cert_data =
-        std::fs::read(cert_file).map_err(|err| ReadCertificateError::new_err(err.to_string()))?;
+        std::fs::read(cert_file).map_err(|err| CertificateError::new_err(err.to_string()))?;
     let key_data =
-        std::fs::read(key_file).map_err(|err| ReadCertificateError::new_err(err.to_string()))?;
+        std::fs::read(key_file).map_err(|err| CertificateError::new_err(err.to_string()))?;
 
     let cert =
-        X509::from_pem(&cert_data).map_err(|err| LoadCertificateError::new_err(err.to_string()))?;
+        X509::from_pem(&cert_data).map_err(|err| CertificateError::new_err(err.to_string()))?;
     let rsa = Rsa::private_key_from_pem(&key_data)
-        .map_err(|err| LoadCertificateError::new_err(err.to_string()))?;
+        .map_err(|err| CertificateError::new_err(err.to_string()))?;
     let pkey =
-        pkey::PKey::from_rsa(rsa).map_err(|err| LoadCertificateError::new_err(err.to_string()))?;
+        pkey::PKey::from_rsa(rsa).map_err(|err| CertificateError::new_err(err.to_string()))?;
 
     let pkcs7 = Pkcs7::sign(
         cert.as_ref(),
@@ -73,28 +72,18 @@ fn validate_expiry(certs: &StackRef<X509>) -> Result<(), Error> {
     Ok(())
 }
 
-fn _verify(cert_file: &str, data_to_verify: &[u8], throw_on_expiry: bool) -> PyResult<Vec<u8>> {
-    let cert_data =
-        std::fs::read(cert_file).map_err(|err| ReadCertificateError::new_err(err.to_string()))?;
-    let cert =
-        X509::from_pem(&cert_data).map_err(|err| LoadCertificateError::new_err(err.to_string()))?;
-
-    let mut certs = Stack::new().expect("Failed to create stack");
-    certs
-        .push(cert)
-        .map_err(|err| LoadCertificateError::new_err(err.to_string()))?;
-
-    let mut out: Vec<u8> = Vec::new();
+fn _verify(data_to_verify: &[u8], throw_on_expiry: bool) -> PyResult<Vec<u8>> {
+    let certs = Stack::new().unwrap();
     let store = X509StoreBuilder::new().unwrap().build();
 
-    let x = Pkcs7::from_smime(data_to_verify);
-    let x = x.map_err(|err| VerifyError::new_err(err.to_string()))?;
-    let (pkcs7, _) = x;
+    let (pkcs7, _) =
+        Pkcs7::from_smime(data_to_verify).map_err(|err| VerifyError::new_err(err.to_string()))?;
 
     if throw_on_expiry {
         validate_expiry(certs.as_ref()).map_err(|err| VerifyError::new_err(err.to_string()))?;
     }
 
+    let mut out: Vec<u8> = Vec::new();
     pkcs7
         .verify(
             certs.as_ref(),
@@ -117,14 +106,9 @@ fn sign(py: Python, cert_file: &str, key_file: &str, data_to_sign: Vec<u8>) -> P
 }
 
 #[pyfunction]
-#[pyo3(signature = (cert_file, data_to_verify, *, throw_on_expiry = false))]
-fn verify(
-    py: Python,
-    cert_file: &str,
-    data_to_verify: Vec<u8>,
-    throw_on_expiry: bool,
-) -> PyResult<PyObject> {
-    match _verify(cert_file, &data_to_verify, throw_on_expiry) {
+#[pyo3(signature = (data_to_verify, *, throw_on_expiry = false))]
+fn verify(py: Python, data_to_verify: Vec<u8>, throw_on_expiry: bool) -> PyResult<PyObject> {
+    match _verify(&data_to_verify, throw_on_expiry) {
         Ok(data) => Ok(PyBytes::new(py, &data).into()),
         Err(err) => Err(err),
     }
@@ -132,14 +116,7 @@ fn verify(
 
 #[pymodule]
 fn rsmime(py: Python, m: &PyModule) -> PyResult<()> {
-    m.add(
-        "ReadCertificateError",
-        py.get_type::<ReadCertificateError>(),
-    )?;
-    m.add(
-        "LoadCertificateError",
-        py.get_type::<LoadCertificateError>(),
-    )?;
+    m.add("CertificateError", py.get_type::<CertificateError>())?;
     m.add("SignError", py.get_type::<SignError>())?;
     m.add("VerifyError", py.get_type::<VerifyError>())?;
     m.add_function(wrap_pyfunction!(sign, m)?)?;
