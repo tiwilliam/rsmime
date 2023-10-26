@@ -18,7 +18,12 @@ create_exception!(rsmime, CertificateError, PyException);
 create_exception!(rsmime, SignError, PyException);
 create_exception!(rsmime, VerifyError, PyException);
 
-fn _sign(cert_file: &str, key_file: &str, data_to_sign: &[u8]) -> PyResult<Vec<u8>> {
+fn _sign(
+    cert_file: &str,
+    key_file: &str,
+    data_to_sign: &[u8],
+    detached: bool,
+) -> PyResult<Vec<u8>> {
     let certs = Stack::new().unwrap();
 
     if data_to_sign.is_empty() {
@@ -37,16 +42,22 @@ fn _sign(cert_file: &str, key_file: &str, data_to_sign: &[u8]) -> PyResult<Vec<u
     let pkey =
         pkey::PKey::from_rsa(rsa).map_err(|err| CertificateError::new_err(err.to_string()))?;
 
+    let flags = if detached {
+        Pkcs7Flags::DETACHED
+    } else {
+        Pkcs7Flags::empty()
+    };
+
     let pkcs7 = Pkcs7::sign(
         cert.as_ref(),
         pkey.as_ref(),
         certs.as_ref(),
         data_to_sign,
-        Pkcs7Flags::empty(),
+        flags,
     )
     .map_err(|err| SignError::new_err(err.to_string()))?;
     let out = pkcs7
-        .to_smime(data_to_sign, Pkcs7Flags::empty())
+        .to_smime(data_to_sign, flags)
         .map_err(|err| SignError::new_err(err.to_string()))?;
 
     Ok(out)
@@ -76,7 +87,7 @@ fn _verify(data_to_verify: &[u8], throw_on_expiry: bool) -> PyResult<Vec<u8>> {
     let certs = Stack::new().unwrap();
     let store = X509StoreBuilder::new().unwrap().build();
 
-    let (pkcs7, _) =
+    let (pkcs7, indata) =
         Pkcs7::from_smime(data_to_verify).map_err(|err| VerifyError::new_err(err.to_string()))?;
 
     if throw_on_expiry {
@@ -84,11 +95,12 @@ fn _verify(data_to_verify: &[u8], throw_on_expiry: bool) -> PyResult<Vec<u8>> {
     }
 
     let mut out: Vec<u8> = Vec::new();
+
     pkcs7
         .verify(
             certs.as_ref(),
             store.as_ref(),
-            None,
+            indata.as_deref(),
             Some(out.as_mut()),
             Pkcs7Flags::NOVERIFY,
         )
@@ -98,8 +110,15 @@ fn _verify(data_to_verify: &[u8], throw_on_expiry: bool) -> PyResult<Vec<u8>> {
 }
 
 #[pyfunction]
-fn sign(py: Python, cert_file: &str, key_file: &str, data_to_sign: Vec<u8>) -> PyResult<PyObject> {
-    match _sign(cert_file, key_file, &data_to_sign) {
+#[pyo3(signature = (cert_file, key_file, data_to_sign, *, detached = false))]
+fn sign(
+    py: Python,
+    cert_file: &str,
+    key_file: &str,
+    data_to_sign: Vec<u8>,
+    detached: bool,
+) -> PyResult<PyObject> {
+    match _sign(cert_file, key_file, &data_to_sign, detached) {
         Ok(data) => Ok(PyBytes::new(py, &data).into()),
         Err(err) => Err(err),
     }
