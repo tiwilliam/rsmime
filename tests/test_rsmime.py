@@ -54,6 +54,10 @@ class TestRsmime:
     def test_sign_int_error(self):
         with pytest.raises(TypeError):
             working_client.sign(123)
+    
+    def test_sign_empty_data(self):
+        with pytest.raises(exceptions.SignError):
+            working_client.sign(b'')
 
     def test_verify(self):
         data = b'abc'
