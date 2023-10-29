@@ -2,8 +2,9 @@ name: docs
 
 on:
   push:
-    branches:
-      - "main"
+    tags:
+      - "*"
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
