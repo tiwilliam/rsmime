@@ -1,10 +1,9 @@
 import pytest
-import rsmime
 from callee import strings
-from rsmime import exceptions
+from rsmime import Rsmime, exceptions
 
-working_client = rsmime.Rsmime('tests/data/certificate.crt', 'tests/data/certificate.key')
-expired_client = rsmime.Rsmime('tests/data/expired.crt', 'tests/data/certificate.key')
+working_client = Rsmime('tests/data/certificate.crt', 'tests/data/certificate.key')
+expired_client = Rsmime('tests/data/expired.crt', 'tests/data/certificate.key')
 
 class TestRsmime:
     def test_rsmime_sign(self):
@@ -42,11 +41,11 @@ class TestRsmime:
 
     def test_rsmime_sign_missing_cert(self):
         with pytest.raises(exceptions.CertificateError):
-            rsmime.Rsmime('tests/data/missing.crt', 'tests/data/certificate.key')
+            Rsmime('tests/data/missing.crt', 'tests/data/certificate.key')
 
     def test_rsmime_sign_missing_key(self):
         with pytest.raises(exceptions.CertificateError):
-            rsmime.Rsmime('tests/data/certificate.crt', 'tests/data/missing.key')
+            Rsmime('tests/data/certificate.crt', 'tests/data/missing.key')
 
     def test_rsmime_sign_str_error(self):
         with pytest.raises(TypeError):
