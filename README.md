@@ -4,7 +4,7 @@
 
 Rust powered Python package for signing data in S/MIME format
 
-![Documentation](https://tiwilliam.github.io/rsmime/)
+[Documentation](https://tiwilliam.github.io/rsmime/)
 
 ## License
 
