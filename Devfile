@@ -4,7 +4,6 @@ version: 1
 up:
   - python: 3.11.4
   - run: pip install .[dev]
-  - run: pip uninstall -y rsmime
 
 commands:
   build:
@@ -12,11 +11,16 @@ commands:
     tasks:
       - run: maturin build --release --strip
 
+  develop:
+    description: Develop the package
+    tasks:
+      - run: maturin develop  --release --strip
+
   test:
     description: Run tests
     tasks:
-      - run: maturin develop
-      - run: pytest
+      - run: maturin develop  --release --strip
+      - run: pytest -vv
 
   docs:
     description: Build new documentation HTML to site directory
