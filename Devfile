@@ -1,0 +1,23 @@
+name: rsmime
+version: 1
+
+up:
+  - python: 3.11.4
+  - run: pip install .[dev]
+  - run: pip uninstall -y rsmime
+
+commands:
+  build:
+    description: Build the package
+    tasks:
+      - run: maturin build --release --strip
+
+  docs:
+    description: Build new documentation HTML to site directory
+    tasks:
+      - run: mkdocs build
+
+  docs:serve:
+    description: Serve and watch documentation for development
+    tasks:
+      - run: mkdocs serve

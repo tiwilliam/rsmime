@@ -1,0 +1,45 @@
+site_name: rsmime
+repo_name: rsmime
+repo_url: https://github.com/tiwilliam/rsmime
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+    logo: material/sort-variant-lock
+  palette: 
+    - scheme: default
+      primary: deep purple
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to light mode
+watch:
+  - python
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+    
+plugins:
+  - search
+  - autorefs
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [python]
+          options:
+            heading_level: 3
+            docstring_section_style: list
+            docstring_style: google
+            members_order: source
+            show_root_heading: true
+            separate_signature: true
+            show_signature_annotations: true
+            merge_init_into_class: true
+            show_if_no_docstring: false

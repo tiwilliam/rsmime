@@ -14,9 +14,11 @@ use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 
-create_exception!(rsmime, CertificateError, PyException);
-create_exception!(rsmime, SignError, PyException);
-create_exception!(rsmime, VerifyError, PyException);
+create_exception!(rsmime, RsmimeError, PyException);
+create_exception!(rsmime, CertificateError, RsmimeError);
+create_exception!(rsmime, CertificateExpiredError, CertificateError);
+create_exception!(rsmime, SignError, RsmimeError);
+create_exception!(rsmime, VerifyError, RsmimeError);
 
 fn _sign(
     cert_file: &str,
@@ -83,15 +85,16 @@ fn validate_expiry(certs: &StackRef<X509>) -> Result<(), Error> {
     Ok(())
 }
 
-fn _verify(data_to_verify: &[u8], throw_on_expiry: bool) -> PyResult<Vec<u8>> {
+fn _verify(data_to_verify: &[u8], throw_on_expired: bool) -> PyResult<Vec<u8>> {
     let certs = Stack::new().unwrap();
     let store = X509StoreBuilder::new().unwrap().build();
 
     let (pkcs7, indata) =
         Pkcs7::from_smime(data_to_verify).map_err(|err| VerifyError::new_err(err.to_string()))?;
 
-    if throw_on_expiry {
-        validate_expiry(certs.as_ref()).map_err(|err| VerifyError::new_err(err.to_string()))?;
+    if throw_on_expired {
+        validate_expiry(certs.as_ref())
+            .map_err(|err| CertificateExpiredError::new_err(err.to_string()))?;
     }
 
     let mut out: Vec<u8> = Vec::new();
@@ -125,9 +128,9 @@ fn sign(
 }
 
 #[pyfunction]
-#[pyo3(signature = (data_to_verify, *, throw_on_expiry = false))]
-fn verify(py: Python, data_to_verify: Vec<u8>, throw_on_expiry: bool) -> PyResult<PyObject> {
-    match _verify(&data_to_verify, throw_on_expiry) {
+#[pyo3(signature = (data_to_verify, *, throw_on_expired = false))]
+fn verify(py: Python, data_to_verify: Vec<u8>, throw_on_expired: bool) -> PyResult<PyObject> {
+    match _verify(&data_to_verify, throw_on_expired) {
         Ok(data) => Ok(PyBytes::new(py, &data).into()),
         Err(err) => Err(err),
     }
@@ -135,9 +138,16 @@ fn verify(py: Python, data_to_verify: Vec<u8>, throw_on_expiry: bool) -> PyResul
 
 #[pymodule]
 fn rsmime(py: Python, m: &PyModule) -> PyResult<()> {
-    m.add("CertificateError", py.get_type::<CertificateError>())?;
-    m.add("SignError", py.get_type::<SignError>())?;
-    m.add("VerifyError", py.get_type::<VerifyError>())?;
+    let exc = PyModule::new(py, "rsmime.exceptions")?;
+    exc.add("RsmimeError", py.get_type::<RsmimeError>())?;
+    exc.add("CertificateError", py.get_type::<CertificateError>())?;
+    exc.add("SignError", py.get_type::<SignError>())?;
+    exc.add("VerifyError", py.get_type::<VerifyError>())?;
+    exc.add(
+        "CertificateExpiredError",
+        py.get_type::<CertificateExpiredError>(),
+    )?;
+    m.add_submodule(exc)?;
     m.add_function(wrap_pyfunction!(sign, m)?)?;
     m.add_function(wrap_pyfunction!(verify, m)?)?;
     Ok(())

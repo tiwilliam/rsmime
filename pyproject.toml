@@ -15,3 +15,18 @@ classifiers = [
     "Operating System :: POSIX",
     "Operating System :: MacOS :: MacOS X",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "maturin",
+    "mkdocs-autorefs==0.5.0",
+    "mkdocs-material==9.4.7",
+    "mkdocstrings[python]==0.23.0",
+    "black==23.10.1",
+]
+
+[tool.maturin]
+python-source = "python"
+include = [
+  { path = "**/*.pyi", format = ["sdist", "wheel"] },
+]
