@@ -35,6 +35,7 @@ plugins:
           paths: [python]
           options:
             heading_level: 3
+            show_source: false
             docstring_section_style: list
             docstring_style: google
             members_order: source
