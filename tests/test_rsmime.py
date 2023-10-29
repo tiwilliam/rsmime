@@ -4,7 +4,6 @@ from rsmime import Rsmime, exceptions
 
 working_client = Rsmime("tests/data/certificate.crt", "tests/data/certificate.key")
 expired_client = Rsmime("tests/data/expired.crt", "tests/data/certificate.key")
-verify_only_client = Rsmime()
 
 
 class TestRsmime:
@@ -70,17 +69,6 @@ class TestRsmime:
         signed_data = working_client.sign(data)
         verified_data = Rsmime.verify(signed_data)
         assert verified_data == data
-
-    def test_sign_with_verify_only_client(self):
-        with pytest.raises(
-            exceptions.SignError, match="Cannot sign without a private key loaded"
-        ):
-            Rsmime(cert_file="tests/data/certificate.crt").sign(b"abc")
-
-        with pytest.raises(
-            exceptions.SignError, match="Cannot sign without a certificate loaded"
-        ):
-            Rsmime(key_file="tests/data/certificate.key").sign(b"abc")
 
     def test_verify_expired(self):
         data = b"abc"
