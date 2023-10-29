@@ -2,6 +2,7 @@
     "[rust]": {
         "editor.formatOnSave": true
     },
+    "files.insertFinalNewline": true,
     "files.exclude": {
         "**/*.so": true,
         "**/.git": true,
@@ -12,6 +13,7 @@
         "**/Thumbs.db": true,
         "**/__pycache__": true,
         "target": true,
-        ".pytest_cache": true,
+        "**/.pytest_cache": true,
+        ".coverage": true,
     }
 }
