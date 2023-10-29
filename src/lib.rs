@@ -20,10 +20,10 @@ fn _sign(
     stack: &StackRef<X509>,
     cert: &X509Ref,
     pkey: &PKeyRef<Private>,
-    data_to_sign: &[u8],
+    message: &[u8],
     detached: bool,
 ) -> PyResult<Vec<u8>> {
-    if data_to_sign.is_empty() {
+    if message.is_empty() {
         return Err(SignError::new_err("Cannot sign empty data"));
     }
 
@@ -33,10 +33,10 @@ fn _sign(
         Pkcs7Flags::empty()
     };
 
-    let pkcs7 = Pkcs7::sign(cert, pkey, stack, data_to_sign, flags)
+    let pkcs7 = Pkcs7::sign(cert, pkey, stack, message, flags)
         .map_err(|err| SignError::new_err(err.to_string()))?;
     let out = pkcs7
-        .to_smime(data_to_sign, flags)
+        .to_smime(message, flags)
         .map_err(|err| SignError::new_err(err.to_string()))?;
 
     Ok(out)
@@ -62,7 +62,7 @@ fn validate_expiry(certs: &StackRef<X509>) -> Result<(), Error> {
     Ok(())
 }
 
-fn _verify(data_to_verify: &[u8], raise_on_expired: bool) -> PyResult<Vec<u8>> {
+fn _verify(message: &[u8], raise_on_expired: bool) -> PyResult<Vec<u8>> {
     let certs = Stack::new().unwrap();
     let store = X509StoreBuilder::new().unwrap().build();
 
@@ -72,7 +72,7 @@ fn _verify(data_to_verify: &[u8], raise_on_expired: bool) -> PyResult<Vec<u8>> {
     }
 
     let (pkcs7, indata) =
-        Pkcs7::from_smime(data_to_verify).map_err(|err| VerifyError::new_err(err.to_string()))?;
+        Pkcs7::from_smime(message).map_err(|err| VerifyError::new_err(err.to_string()))?;
 
     let mut out: Vec<u8> = Vec::new();
 
@@ -153,25 +153,21 @@ impl Rsmime {
     }
 
     #[staticmethod]
-    #[pyo3(signature = (data_to_verify, *, raise_on_expired = false))]
-    fn verify(
-        py_: Python<'_>,
-        data_to_verify: Vec<u8>,
-        raise_on_expired: bool,
-    ) -> PyResult<PyObject> {
-        match _verify(&data_to_verify, raise_on_expired) {
+    #[pyo3(signature = (message, *, raise_on_expired = false))]
+    fn verify(py_: Python<'_>, message: Vec<u8>, raise_on_expired: bool) -> PyResult<PyObject> {
+        match _verify(&message, raise_on_expired) {
             Ok(data) => Ok(PyBytes::new(py_, &data).into()),
             Err(err) => Err(err),
         }
     }
 
-    #[pyo3(signature = (data_to_sign, *, detached = false))]
-    fn sign(self_: PyRef<'_, Self>, data_to_sign: Vec<u8>, detached: bool) -> PyResult<PyObject> {
+    #[pyo3(signature = (message, *, detached = false))]
+    fn sign(self_: PyRef<'_, Self>, message: Vec<u8>, detached: bool) -> PyResult<PyObject> {
         match _sign(
             self_.stack.as_ref(),
             self_.cert.as_ref(),
             self_.pkey.as_ref(),
-            &data_to_sign,
+            &message,
             detached,
         ) {
             Ok(data) => Ok(PyBytes::new(self_.py(), &data).into()),
