@@ -23,4 +23,4 @@ jobs:
           python-version-file: ".python-version"
       - run: |
           pip install .[dev]
-          mike deploy ${{ github.ref_name }} latest
+          mike deploy --push --update-aliases ${{ github.ref_name }} latest

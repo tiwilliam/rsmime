@@ -1,5 +1,6 @@
 site_name: rsmime
 repo_name: rsmime
+site_url: https://tiwilliam.github.io/rsmime/
 repo_url: https://github.com/tiwilliam/rsmime
 theme:
   name: material
@@ -34,7 +35,8 @@ markdown_extensions:
 plugins:
   - search
   - autorefs
-  - mike
+  - mike:
+      version_selector: true
   - mkdocstrings:
       handlers:
         python:
