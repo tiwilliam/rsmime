@@ -1,6 +1,6 @@
 # rsmime
 
-[![PyPI](https://img.shields.io/pypi/v/rsmime?color=gr)](https://pypi.org/project/rsmime/) [![Build](https://github.com/tiwilliam/rsmime/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/tiwilliam/rsmime/actions/workflows/build.yml)
+[![PyPI](https://img.shields.io/pypi/v/rsmime?color=gr)](https://pypi.org/project/rsmime/) [![Build](https://github.com/tiwilliam/rsmime/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/tiwilliam/rsmime/actions/workflows/build.yml) [![Tests](https://github.com/tiwilliam/rsmime/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/tiwilliam/rsmime/actions/workflows/tests.yml)
 
 Rust powered Python package for signing data in S/MIME format
 
