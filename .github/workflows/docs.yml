@@ -14,13 +14,18 @@ permissions:
   contents: write
 
 jobs:
-  deploy:
+  docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
           python-version-file: ".python-version"
-      - run: |
-          pip install .[dev]
-          mike deploy --push --update-aliases ${{ github.ref_name }} latest
+      - name: Install dependencies
+        run: pip install .[dev]
+      - name: Congifure git
+        run: |
+          git config user.name "Github Actions"
+          git config user.email github-actions@github.com
+      - name: Build docs
+        run: mike deploy --push --update-aliases ${{ github.ref_name }} latest
