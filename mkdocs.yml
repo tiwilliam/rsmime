@@ -5,7 +5,7 @@ theme:
   name: material
   icon:
     repo: fontawesome/brands/github
-    logo: material/sort-variant-lock
+    logo: material/draw-pen
   palette: 
     - scheme: default
       primary: deep purple
