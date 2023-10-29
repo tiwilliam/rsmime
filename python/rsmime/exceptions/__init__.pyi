@@ -1,24 +1,24 @@
 class RsmimeError(Exception):
-    """Base class for all exceptions in this module.
-    """
+    """Base class for all exceptions in this module."""
+
     ...
 
 class CertificateError(RsmimeError):
-    """Thrown when there is an error with the input certificate.
-    """
+    """Thrown when there is an error with the input certificate."""
+
     ...
 
 class CertificateExpiredError(CertificateError):
-    """Thrown when any certificate in the message has expired.
-    """
+    """Thrown when any certificate in the message has expired."""
+
     ...
-    
+
 class SignError(RsmimeError):
-    """Thrown when there is an error signing the data.
-    """
+    """Thrown when there is an error signing the data."""
+
     ...
 
 class VerifyError(RsmimeError):
-    """Thrown when there is an error verifying the data.
-    """
+    """Thrown when there is an error verifying the data."""
+
     ...

@@ -2,6 +2,10 @@
     "[rust]": {
         "editor.formatOnSave": true
     },
+    "[python]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "ms-python.black-formatter",
+    },
     "files.insertFinalNewline": true,
     "files.exclude": {
         "**/*.so": true,

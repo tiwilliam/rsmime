@@ -5,12 +5,11 @@ class Rsmime:
         Parameters:
             cert_file: Path to certificate on disk.
             key_file: Path to private key on disk.
-        
+
         Raises:
             CertificateError: If there is an error reading the certificate or key.
         """
         ...
-
     def sign(self, data_to_sign: bytes, *, detached: bool = False) -> bytes:
         """Sign a message and return the signed S/MIME message.
 
@@ -27,10 +26,9 @@ class Rsmime:
 
         Raises:
             SignError: If there is an error signing the data.
-            
+
         """
         ...
-
     def verify(self, data_to_verify: bytes, raise_on_expired: bool = False) -> bytes:
         """Verify a signed message and return the raw message data.
 
@@ -38,7 +36,7 @@ class Rsmime:
             data_to_verify: The signed message to verify.
             raise_on_expired: Whether to raise an exception if any certificate
                 in the message has expired.
-        
+
         Returns:
             Raw message data.
 
