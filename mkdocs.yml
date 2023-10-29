@@ -1,24 +1,21 @@
 site_name: rsmime
 repo_name: rsmime
+site_url: https://tiwilliam.github.io/rsmime/
 repo_url: https://github.com/tiwilliam/rsmime
 theme:
   name: material
+  custom_dir: overrides
   icon:
     repo: fontawesome/brands/github
-    logo: material/sort-variant-lock
-  palette: 
-    - scheme: default
-      primary: deep purple
-      toggle:
-        icon: material/toggle-switch
-        name: Switch to dark mode
-    - scheme: slate
-      primary: deep purple
-      toggle:
-        icon: material/toggle-switch-off-outline
-        name: Switch to light mode
+    logo: material/draw-pen
+
 watch:
   - python
+
+extra:
+  version:
+    provider: mike
+    default: latest
 
 markdown_extensions:
   - pymdownx.highlight
@@ -29,6 +26,8 @@ markdown_extensions:
 plugins:
   - search
   - autorefs
+  - mike:
+      version_selector: true
   - mkdocstrings:
       handlers:
         python:

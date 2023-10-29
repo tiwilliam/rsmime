@@ -1,2 +1,4 @@
 /target
 /.shadowenv.d
+*.so
+__pycache__/

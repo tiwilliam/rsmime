@@ -11,13 +11,13 @@ pip install rsmime
 ## Sign an attached message
 
 ```python
-import rsmime
+from rsmime import Rsmime
 from rsmime.exceptions import SignError, CertificateError
 
-raw_data = b'Some data to sign'
+client = Rsmime("some.crt", "some.key")
 
 try:
-    signed_data = rsmime.sign('some.crt', 'some.key', raw_data)
+    signed_data = client.sign(b"Some data to sign")
     print(signed_data.decode())
 except (SignError, CertificateError) as e:
     print("Failed to sign:", e)
@@ -42,13 +42,13 @@ gRUKfNnUOID3xMWl65crFoIyCA==
 ## Sign a detached message
 
 ```python
-import rsmime
+from rsmime import Rsmime
 from rsmime.exceptions import SignError, CertificateError
 
-raw_data = b'Some data to sign'
+client = Rsmime("some.crt", "some.key")
 
 try:
-    signed_data = rsmime.sign('some.crt', 'some.key', raw_data, detached=True)
+    signed_data = client.sign(b"Some data to sign", detached=True)
     print(signed_data.decode())
 except (SignError, CertificateError) as e:
     print("Failed to sign:", e)
@@ -82,13 +82,11 @@ lV7oyQKEY6sVyQkWP2rPmtPs85hsmZGmej0Tx4x7
 ## Verify a signed message
 
 ```python
-import rsmime
+from rsmime import Rsmime
 from rsmime.exceptions import VerifyError
 
-signed_data = b'...'
-
 try:
-    raw_again = rsmime.verify(signed_data)
+    raw_again = Rsmime.verify(signed_data)
     print(raw_again.decode())
 except VerifyError as e:
     print("Failed to verify:", e)

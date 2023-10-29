@@ -4,7 +4,8 @@ use std::io::{Error, ErrorKind};
 
 use openssl::nid::Nid;
 use openssl::pkcs7::{Pkcs7, Pkcs7Flags};
-use openssl::pkey;
+use openssl::pkey::Private;
+use openssl::pkey::{PKey, PKeyRef};
 use openssl::rsa::Rsa;
 use openssl::stack::{Stack, StackRef};
 use openssl::x509::store::X509StoreBuilder;
@@ -13,36 +14,18 @@ use pyo3::create_exception;
 use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
-
-create_exception!(rsmime, RsmimeError, PyException);
-create_exception!(rsmime, CertificateError, RsmimeError);
-create_exception!(rsmime, CertificateExpiredError, CertificateError);
-create_exception!(rsmime, SignError, RsmimeError);
-create_exception!(rsmime, VerifyError, RsmimeError);
+use pyo3::wrap_pymodule;
 
 fn _sign(
-    cert_file: &str,
-    key_file: &str,
+    stack: &StackRef<X509>,
+    cert: &X509Ref,
+    pkey: &PKeyRef<Private>,
     data_to_sign: &[u8],
     detached: bool,
 ) -> PyResult<Vec<u8>> {
-    let certs = Stack::new().unwrap();
-
     if data_to_sign.is_empty() {
         return Err(SignError::new_err("Cannot sign empty data"));
     }
-
-    let cert_data =
-        std::fs::read(cert_file).map_err(|err| CertificateError::new_err(err.to_string()))?;
-    let key_data =
-        std::fs::read(key_file).map_err(|err| CertificateError::new_err(err.to_string()))?;
-
-    let cert =
-        X509::from_pem(&cert_data).map_err(|err| CertificateError::new_err(err.to_string()))?;
-    let rsa = Rsa::private_key_from_pem(&key_data)
-        .map_err(|err| CertificateError::new_err(err.to_string()))?;
-    let pkey =
-        pkey::PKey::from_rsa(rsa).map_err(|err| CertificateError::new_err(err.to_string()))?;
 
     let flags = if detached {
         Pkcs7Flags::DETACHED
@@ -50,14 +33,8 @@ fn _sign(
         Pkcs7Flags::empty()
     };
 
-    let pkcs7 = Pkcs7::sign(
-        cert.as_ref(),
-        pkey.as_ref(),
-        certs.as_ref(),
-        data_to_sign,
-        flags,
-    )
-    .map_err(|err| SignError::new_err(err.to_string()))?;
+    let pkcs7 = Pkcs7::sign(cert, pkey, stack, data_to_sign, flags)
+        .map_err(|err| SignError::new_err(err.to_string()))?;
     let out = pkcs7
         .to_smime(data_to_sign, flags)
         .map_err(|err| SignError::new_err(err.to_string()))?;
@@ -85,17 +62,17 @@ fn validate_expiry(certs: &StackRef<X509>) -> Result<(), Error> {
     Ok(())
 }
 
-fn _verify(data_to_verify: &[u8], throw_on_expired: bool) -> PyResult<Vec<u8>> {
+fn _verify(data_to_verify: &[u8], raise_on_expired: bool) -> PyResult<Vec<u8>> {
     let certs = Stack::new().unwrap();
     let store = X509StoreBuilder::new().unwrap().build();
 
-    let (pkcs7, indata) =
-        Pkcs7::from_smime(data_to_verify).map_err(|err| VerifyError::new_err(err.to_string()))?;
-
-    if throw_on_expired {
+    if raise_on_expired {
         validate_expiry(certs.as_ref())
             .map_err(|err| CertificateExpiredError::new_err(err.to_string()))?;
     }
+
+    let (pkcs7, indata) =
+        Pkcs7::from_smime(data_to_verify).map_err(|err| VerifyError::new_err(err.to_string()))?;
 
     let mut out: Vec<u8> = Vec::new();
 
@@ -112,43 +89,93 @@ fn _verify(data_to_verify: &[u8], throw_on_expired: bool) -> PyResult<Vec<u8>> {
     Ok(out)
 }
 
-#[pyfunction]
-#[pyo3(signature = (cert_file, key_file, data_to_sign, *, detached = false))]
-fn sign(
-    py: Python,
-    cert_file: &str,
-    key_file: &str,
-    data_to_sign: Vec<u8>,
-    detached: bool,
-) -> PyResult<PyObject> {
-    match _sign(cert_file, key_file, &data_to_sign, detached) {
-        Ok(data) => Ok(PyBytes::new(py, &data).into()),
-        Err(err) => Err(err),
-    }
-}
+create_exception!(exceptions, RsmimeError, PyException);
+create_exception!(exceptions, CertificateError, RsmimeError);
+create_exception!(exceptions, CertificateExpiredError, CertificateError);
+create_exception!(exceptions, SignError, RsmimeError);
+create_exception!(exceptions, VerifyError, RsmimeError);
 
-#[pyfunction]
-#[pyo3(signature = (data_to_verify, *, throw_on_expired = false))]
-fn verify(py: Python, data_to_verify: Vec<u8>, throw_on_expired: bool) -> PyResult<PyObject> {
-    match _verify(&data_to_verify, throw_on_expired) {
-        Ok(data) => Ok(PyBytes::new(py, &data).into()),
-        Err(err) => Err(err),
-    }
+#[pymodule]
+fn exceptions(py: Python, m: &PyModule) -> PyResult<()> {
+    m.add("RsmimeError", py.get_type::<RsmimeError>())?;
+    m.add("CertificateError", py.get_type::<CertificateError>())?;
+    m.add(
+        "CertificateExpiredError",
+        py.get_type::<CertificateExpiredError>(),
+    )?;
+    m.add("SignError", py.get_type::<SignError>())?;
+    m.add("VerifyError", py.get_type::<VerifyError>())?;
+    Ok(())
 }
 
 #[pymodule]
 fn rsmime(py: Python, m: &PyModule) -> PyResult<()> {
-    let exc = PyModule::new(py, "rsmime.exceptions")?;
-    exc.add("RsmimeError", py.get_type::<RsmimeError>())?;
-    exc.add("CertificateError", py.get_type::<CertificateError>())?;
-    exc.add("SignError", py.get_type::<SignError>())?;
-    exc.add("VerifyError", py.get_type::<VerifyError>())?;
-    exc.add(
-        "CertificateExpiredError",
-        py.get_type::<CertificateExpiredError>(),
-    )?;
-    m.add_submodule(exc)?;
-    m.add_function(wrap_pyfunction!(sign, m)?)?;
-    m.add_function(wrap_pyfunction!(verify, m)?)?;
+    let exceptions = wrap_pymodule!(exceptions);
+
+    py.import("sys")?
+        .getattr("modules")?
+        .set_item("rsmime.exceptions", exceptions(py))?;
+
+    m.add_wrapped(exceptions)?;
+    m.add_class::<Rsmime>()?;
+
     Ok(())
+}
+
+#[pyclass]
+struct Rsmime {
+    stack: Stack<X509>,
+    cert: X509,
+    pkey: PKey<Private>,
+}
+
+#[pymethods]
+impl Rsmime {
+    #[new]
+    #[pyo3(signature = (cert_file, key_file))]
+    fn new(cert_file: String, key_file: String) -> PyResult<Self> {
+        let stack = Stack::new().unwrap();
+
+        let cert_data =
+            std::fs::read(cert_file).map_err(|err| CertificateError::new_err(err.to_string()))?;
+
+        let cert =
+            X509::from_pem(&cert_data).map_err(|err| CertificateError::new_err(err.to_string()))?;
+
+        let key_data =
+            std::fs::read(key_file).map_err(|err| CertificateError::new_err(err.to_string()))?;
+
+        let rsa = Rsa::private_key_from_pem(&key_data)
+            .map_err(|err| CertificateError::new_err(err.to_string()))?;
+        let pkey = PKey::from_rsa(rsa).map_err(|err| CertificateError::new_err(err.to_string()))?;
+
+        Ok(Rsmime { stack, cert, pkey })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (data_to_verify, *, raise_on_expired = false))]
+    fn verify(
+        py_: Python<'_>,
+        data_to_verify: Vec<u8>,
+        raise_on_expired: bool,
+    ) -> PyResult<PyObject> {
+        match _verify(&data_to_verify, raise_on_expired) {
+            Ok(data) => Ok(PyBytes::new(py_, &data).into()),
+            Err(err) => Err(err),
+        }
+    }
+
+    #[pyo3(signature = (data_to_sign, *, detached = false))]
+    fn sign(self_: PyRef<'_, Self>, data_to_sign: Vec<u8>, detached: bool) -> PyResult<PyObject> {
+        match _sign(
+            self_.stack.as_ref(),
+            self_.cert.as_ref(),
+            self_.pkey.as_ref(),
+            &data_to_sign,
+            detached,
+        ) {
+            Ok(data) => Ok(PyBytes::new(self_.py(), &data).into()),
+            Err(err) => Err(err),
+        }
+    }
 }
