@@ -4,6 +4,7 @@ use std::io::{Error, ErrorKind};
 
 use openssl::nid::Nid;
 use openssl::pkcs7::{Pkcs7, Pkcs7Flags};
+use openssl::pkey::Private;
 use openssl::pkey::{PKey, PKeyRef};
 use openssl::rsa::Rsa;
 use openssl::stack::{Stack, StackRef};
@@ -18,7 +19,7 @@ use pyo3::wrap_pymodule;
 fn _sign(
     stack: &StackRef<X509>,
     cert: &X509Ref,
-    pkey: &PKeyRef<openssl::pkey::Private>,
+    pkey: &PKeyRef<Private>,
     data_to_sign: &[u8],
     detached: bool,
 ) -> PyResult<Vec<u8>> {
@@ -124,49 +125,79 @@ fn rsmime(py: Python, m: &PyModule) -> PyResult<()> {
 #[pyclass]
 struct Rsmime {
     stack: Stack<X509>,
-    cert: X509,
-    pkey: PKey<openssl::pkey::Private>,
+    cert: Option<X509>,
+    pkey: Option<PKey<Private>>,
 }
 
 #[pymethods]
 impl Rsmime {
     #[new]
-    #[pyo3(signature = (cert_file, key_file))]
-    fn new(cert_file: String, key_file: String) -> PyResult<Self> {
+    #[pyo3(signature = (cert_file = None, key_file = None))]
+    fn new(cert_file: Option<String>, key_file: Option<String>) -> PyResult<Self> {
         let stack = Stack::new().unwrap();
 
-        let cert_data =
-            std::fs::read(cert_file).map_err(|err| CertificateError::new_err(err.to_string()))?;
-        let key_data =
-            std::fs::read(key_file).map_err(|err| CertificateError::new_err(err.to_string()))?;
+        let cert = if cert_file.is_some() {
+            let cert_data = std::fs::read(cert_file.unwrap())
+                .map_err(|err| CertificateError::new_err(err.to_string()))?;
+            Some(
+                X509::from_pem(&cert_data)
+                    .map_err(|err| CertificateError::new_err(err.to_string()))?,
+            )
+        } else {
+            None
+        };
 
-        let cert =
-            X509::from_pem(&cert_data).map_err(|err| CertificateError::new_err(err.to_string()))?;
-        let rsa = Rsa::private_key_from_pem(&key_data)
-            .map_err(|err| CertificateError::new_err(err.to_string()))?;
-        let pkey = PKey::from_rsa(rsa).map_err(|err| CertificateError::new_err(err.to_string()))?;
+        let pkey = if key_file.is_some() {
+            let key_data = std::fs::read(key_file.unwrap())
+                .map_err(|err| CertificateError::new_err(err.to_string()))?;
+
+            let rsa = Rsa::private_key_from_pem(&key_data)
+                .map_err(|err| CertificateError::new_err(err.to_string()))?;
+            Some(PKey::from_rsa(rsa).map_err(|err| CertificateError::new_err(err.to_string()))?)
+        } else {
+            None
+        };
 
         Ok(Rsmime { stack, cert, pkey })
     }
 
+    #[staticmethod]
     #[pyo3(signature = (data_to_verify, *, raise_on_expired = false))]
     fn verify(
-        self_: PyRef<'_, Self>,
+        py_: Python<'_>,
         data_to_verify: Vec<u8>,
         raise_on_expired: bool,
     ) -> PyResult<PyObject> {
         match _verify(&data_to_verify, raise_on_expired) {
-            Ok(data) => Ok(PyBytes::new(self_.py(), &data).into()),
+            Ok(data) => Ok(PyBytes::new(py_, &data).into()),
             Err(err) => Err(err),
         }
     }
 
     #[pyo3(signature = (data_to_sign, *, detached = false))]
     fn sign(self_: PyRef<'_, Self>, data_to_sign: Vec<u8>, detached: bool) -> PyResult<PyObject> {
+        let cert = match &self_.cert {
+            Some(cert) => cert,
+            None => {
+                return Err(SignError::new_err(
+                    "Cannot sign without a certificate loaded",
+                ))
+            }
+        };
+
+        let pkey = match &self_.pkey {
+            Some(pkey) => pkey,
+            None => {
+                return Err(SignError::new_err(
+                    "Cannot sign without a private key loaded",
+                ))
+            }
+        };
+
         match _sign(
             self_.stack.as_ref(),
-            self_.cert.as_ref(),
-            self_.pkey.as_ref(),
+            cert.as_ref(),
+            pkey.as_ref(),
             &data_to_sign,
             detached,
         ) {

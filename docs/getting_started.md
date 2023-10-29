@@ -85,10 +85,8 @@ lV7oyQKEY6sVyQkWP2rPmtPs85hsmZGmej0Tx4x7
 from rsmime import Rsmime
 from rsmime.exceptions import VerifyError
 
-client = Rsmime("some.crt", "some.key")
-
 try:
-    raw_again = client.verify(signed_data)
+    raw_again = Rsmime.verify(signed_data)
     print(raw_again.decode())
 except VerifyError as e:
     print("Failed to verify:", e)
