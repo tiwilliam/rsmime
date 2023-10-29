@@ -1,10 +1,6 @@
 class Rsmime:
-    def __init__(
-        self, cert_file: str | None = None, key_file: str | None = None
-    ) -> None:
-        """Initialize signing client and load certificate from disk. If `cert_file` and
-        `key_file` are not provided, the client will be initialized without a
-        certificate and will only be able to verify messages.
+    def __init__(self, cert_file: str, key_file: str) -> None:
+        """Initialize signing client and load certificate from disk.
 
         Parameters:
             cert_file: Path to certificate on disk.
