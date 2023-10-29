@@ -18,11 +18,13 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = [
+    "black==23.10.1",
+    "callee==0.3.1",
     "maturin",
     "mkdocs-autorefs==0.5.0",
     "mkdocs-material==9.4.7",
     "mkdocstrings[python]==0.23.0",
-    "black==23.10.1",
+    "pytest==7.4.3",
 ]
 
 [tool.maturin]

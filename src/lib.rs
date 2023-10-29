@@ -13,12 +13,7 @@ use pyo3::create_exception;
 use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
-
-create_exception!(rsmime, RsmimeError, PyException);
-create_exception!(rsmime, CertificateError, RsmimeError);
-create_exception!(rsmime, CertificateExpiredError, CertificateError);
-create_exception!(rsmime, SignError, RsmimeError);
-create_exception!(rsmime, VerifyError, RsmimeError);
+use pyo3::{wrap_pyfunction, wrap_pymodule};
 
 fn _sign(
     cert_file: &str,
@@ -136,18 +131,34 @@ fn verify(py: Python, data_to_verify: Vec<u8>, throw_on_expired: bool) -> PyResu
     }
 }
 
+create_exception!(exceptions, RsmimeError, PyException);
+create_exception!(exceptions, CertificateError, RsmimeError);
+create_exception!(exceptions, CertificateExpiredError, CertificateError);
+create_exception!(exceptions, SignError, RsmimeError);
+create_exception!(exceptions, VerifyError, RsmimeError);
+
 #[pymodule]
-fn rsmime(py: Python, m: &PyModule) -> PyResult<()> {
-    let exc = PyModule::new(py, "rsmime.exceptions")?;
-    exc.add("RsmimeError", py.get_type::<RsmimeError>())?;
-    exc.add("CertificateError", py.get_type::<CertificateError>())?;
-    exc.add("SignError", py.get_type::<SignError>())?;
-    exc.add("VerifyError", py.get_type::<VerifyError>())?;
-    exc.add(
+fn exceptions(py: Python, m: &PyModule) -> PyResult<()> {
+    m.add("RsmimeError", py.get_type::<RsmimeError>())?;
+    m.add("CertificateError", py.get_type::<CertificateError>())?;
+    m.add(
         "CertificateExpiredError",
         py.get_type::<CertificateExpiredError>(),
     )?;
-    m.add_submodule(exc)?;
+    m.add("SignError", py.get_type::<SignError>())?;
+    m.add("VerifyError", py.get_type::<VerifyError>())?;
+    Ok(())
+}
+
+#[pymodule]
+fn rsmime(py: Python, m: &PyModule) -> PyResult<()> {
+    let exceptions = wrap_pymodule!(exceptions);
+
+    py.import("sys")?
+        .getattr("modules")?
+        .set_item("rsmime.exceptions", exceptions(py))?;
+
+    m.add_wrapped(exceptions)?;
     m.add_function(wrap_pyfunction!(sign, m)?)?;
     m.add_function(wrap_pyfunction!(verify, m)?)?;
     Ok(())

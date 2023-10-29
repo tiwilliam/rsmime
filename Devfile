@@ -12,6 +12,12 @@ commands:
     tasks:
       - run: maturin build --release --strip
 
+  test:
+    description: Run tests
+    tasks:
+      - run: maturin develop
+      - run: pytest
+
   docs:
     description: Build new documentation HTML to site directory
     tasks:

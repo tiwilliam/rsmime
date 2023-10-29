@@ -1,0 +1,27 @@
+name: test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version-file: ".python-version"
+      - name: Install dependencies
+        run: pip install .[dev]
+      - name: Build crate
+        run: maturin develop
+      - name: Run tests
+        run: pytest
