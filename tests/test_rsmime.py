@@ -63,4 +63,4 @@ class TestRsmime:
         data = b'abc'
         signed_data = rsmime.sign('tests/data/expired.crt', 'tests/data/certificate.key', data)
         with pytest.raises(exceptions.CertificateExpiredError):
-            rsmime.verify(signed_data, throw_on_expired=True)
+            rsmime.verify(signed_data, raise_on_expired=True)

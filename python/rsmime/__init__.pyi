@@ -21,20 +21,20 @@ def sign(cert_file: str, key_file: str, data_to_sign: bytes, *, detached: bool =
     """
     ...
 
-def verify(data_to_verify: bytes, throw_on_expired: bool = False) -> bytes:
+def verify(data_to_verify: bytes, raise_on_expired: bool = False) -> bytes:
     """Verify a signed message and return the raw message data.
 
     Parameters:
         data_to_verify: The signed message to verify.
-        throw_on_expired: Whether to throw an exception if any
-            certificate in the message has expired.
+        raise_on_expired: Whether to raise an exception if any certificate
+            in the message has expired.
     
     Returns:
         Raw message data.
 
     Raises:
         VerifyError: If there is an error verifying the message.
-        CertificateExpiredError: If any certificate in the message has expired. Thrown only
-            if `throw_on_expired` is `True`.
+        CertificateExpiredError: If any certificate in the message has expired.
+            Raise only if `raise_on_expired` is `True`.
     """
     ...

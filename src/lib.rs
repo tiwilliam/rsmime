@@ -80,14 +80,14 @@ fn validate_expiry(certs: &StackRef<X509>) -> Result<(), Error> {
     Ok(())
 }
 
-fn _verify(data_to_verify: &[u8], throw_on_expired: bool) -> PyResult<Vec<u8>> {
+fn _verify(data_to_verify: &[u8], raise_on_expired: bool) -> PyResult<Vec<u8>> {
     let certs = Stack::new().unwrap();
     let store = X509StoreBuilder::new().unwrap().build();
 
     let (pkcs7, indata) =
         Pkcs7::from_smime(data_to_verify).map_err(|err| VerifyError::new_err(err.to_string()))?;
 
-    if throw_on_expired {
+    if raise_on_expired {
         validate_expiry(certs.as_ref())
             .map_err(|err| CertificateExpiredError::new_err(err.to_string()))?;
     }
@@ -123,9 +123,9 @@ fn sign(
 }
 
 #[pyfunction]
-#[pyo3(signature = (data_to_verify, *, throw_on_expired = false))]
-fn verify(py: Python, data_to_verify: Vec<u8>, throw_on_expired: bool) -> PyResult<PyObject> {
-    match _verify(&data_to_verify, throw_on_expired) {
+#[pyo3(signature = (data_to_verify, *, raise_on_expired = false))]
+fn verify(py: Python, data_to_verify: Vec<u8>, raise_on_expired: bool) -> PyResult<PyObject> {
+    match _verify(&data_to_verify, raise_on_expired) {
         Ok(data) => Ok(PyBytes::new(py, &data).into()),
         Err(err) => Err(err),
     }
