@@ -3,9 +3,12 @@ import rsmime
 from callee import strings
 from rsmime import exceptions
 
+working_client = rsmime.Rsmime('tests/data/certificate.crt', 'tests/data/certificate.key')
+expired_client = rsmime.Rsmime('tests/data/expired.crt', 'tests/data/certificate.key')
+
 class TestRsmime:
     def test_rsmime_sign(self):
-        signed_data = rsmime.sign('tests/data/certificate.crt', 'tests/data/certificate.key', b'abc')
+        signed_data = working_client.sign(b'abc')
         assert signed_data == strings.Regex(
             b'MIME-Version: 1.0\n'
             b'Content-Disposition: attachment; filename="smime.p7m"\n'
@@ -18,7 +21,7 @@ class TestRsmime:
         )
 
     def test_rsmime_sign_detached(self):
-        signed_data = rsmime.sign('tests/data/certificate.crt', 'tests/data/certificate.key', b'abc', detached=True)
+        signed_data = working_client.sign(b'abc', detached=True)
         assert signed_data == strings.Regex(
             b'MIME-Version: 1.0\n'
             b'Content-Type: multipart/signed; protocol="application/x-pkcs7-signature"; micalg="sha-256"; boundary="----[A-Z0-9]+"\n\n'
@@ -39,28 +42,28 @@ class TestRsmime:
 
     def test_rsmime_sign_missing_cert(self):
         with pytest.raises(exceptions.CertificateError):
-            rsmime.sign('tests/data/missing.crt', 'tests/data/certificate.key', b'abc')
+            rsmime.Rsmime('tests/data/missing.crt', 'tests/data/certificate.key')
 
     def test_rsmime_sign_missing_key(self):
         with pytest.raises(exceptions.CertificateError):
-            rsmime.sign('tests/data/certificate.crt', 'tests/data/missing.key', b'abc')
+            rsmime.Rsmime('tests/data/certificate.crt', 'tests/data/missing.key')
 
     def test_rsmime_sign_str_error(self):
         with pytest.raises(TypeError):
-            rsmime.sign('tests/data/certificate.crt', 'tests/data/certificate.key', 'abc')
+            working_client.sign('abc')
 
     def test_rsmime_sign_int_error(self):
         with pytest.raises(TypeError):
-            rsmime.sign('tests/data/certificate.crt', 'tests/data/certificate.key', 123)
+            working_client.sign(123)
 
     def test_rsmime_verify(self):
         data = b'abc'
-        signed_data = rsmime.sign('tests/data/certificate.crt', 'tests/data/certificate.key', data)
-        verified_data = rsmime.verify(signed_data)
+        signed_data = working_client.sign(data)
+        verified_data = working_client.verify(signed_data)
         assert verified_data == data
 
     def test_rsmime_verify_expired(self):
         data = b'abc'
-        signed_data = rsmime.sign('tests/data/expired.crt', 'tests/data/certificate.key', data)
+        signed_data = expired_client.sign(data)
         with pytest.raises(exceptions.CertificateExpiredError):
-            rsmime.verify(signed_data, raise_on_expired=True)
+            working_client.verify(signed_data, raise_on_expired=True)

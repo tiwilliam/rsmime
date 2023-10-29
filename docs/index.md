@@ -8,6 +8,5 @@ Rust powered Python package for signing data in S/MIME format
 
 ## API Reference
 
-::: rsmime
-
+::: rsmime.Rsmime
 ::: rsmime.exceptions
