@@ -27,5 +27,6 @@ jobs:
         run: |
           git config user.name "Github Actions"
           git config user.email github-actions@github.com
+          git fetch origin gh-pages --depth=1
       - name: Build docs
         run: mike deploy --push --update-aliases ${{ github.ref_name }} latest
