@@ -23,11 +23,6 @@ commands:
       - run: pytest -vv
 
   docs:
-    description: Build new documentation HTML to site directory
-    tasks:
-      - run: mkdocs build
-
-  docs:serve:
     description: Serve and watch documentation for development
     tasks:
       - run: mkdocs serve
