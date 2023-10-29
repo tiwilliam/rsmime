@@ -2,7 +2,7 @@
 
 ## rsmime
 
-Rust powered Python package for signing data in S/MIME format
+Python package for signing and verifying S/MIME messages
 
 <a href="https://pypi.org/project/rsmime/">![PyPI](https://img.shields.io/pypi/v/rsmime?color=gr&style=for-the-badge)</a>
 

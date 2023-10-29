@@ -1,6 +1,6 @@
 class Rsmime:
     def __init__(self, cert_file: str, key_file: str) -> None:
-        """Initialize signing client and load certificate from disk.
+        """Initialize client and load certificate from disk.
 
         Parameters:
             cert_file: Path to certificate on disk.
