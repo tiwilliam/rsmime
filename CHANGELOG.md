@@ -2,7 +2,7 @@
 
 Released 2023-10-30
 
-* [GH2](https://github.com/tiwilliam/rsmime/pull/2) - Fix `raise_on_expired` to properly raise `CertificateExpiredError` when the token is expired on verify.
+* [#2](https://github.com/tiwilliam/rsmime/pull/2) - Fix `raise_on_expired` to properly raise `CertificateExpiredError` when the token is expired on verify.
 
 ## 0.6.3
 
