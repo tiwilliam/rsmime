@@ -1,8 +1,8 @@
-## Unreleased
+## 0.6.4
 
-Released YYYY-MM-DD
+Released 2023-10-30
 
-* No changes yet.
+* [#2](https://github.com/tiwilliam/rsmime/pull/2) - Fix `raise_on_expired` to properly raise `CertificateExpiredError` when the token is expired on verify.
 
 ## 0.6.3
 
