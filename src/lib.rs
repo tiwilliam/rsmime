@@ -65,16 +65,16 @@ fn validate_expiry(certs: &StackRef<X509>) -> Result<(), Error> {
 fn _verify(message: &[u8], raise_on_expired: bool) -> PyResult<Vec<u8>> {
     let certs = Stack::new().unwrap();
     let store = X509StoreBuilder::new().unwrap().build();
-
-    if raise_on_expired {
-        validate_expiry(certs.as_ref())
-            .map_err(|err| CertificateExpiredError::new_err(err.to_string()))?;
-    }
+    let mut out: Vec<u8> = Vec::new();
 
     let (pkcs7, indata) =
         Pkcs7::from_smime(message).map_err(|err| VerifyError::new_err(err.to_string()))?;
 
-    let mut out: Vec<u8> = Vec::new();
+    if raise_on_expired {
+        let signer_certs = pkcs7.signers(certs.as_ref(), Pkcs7Flags::empty()).unwrap();
+        validate_expiry(signer_certs.as_ref())
+            .map_err(|err| CertificateExpiredError::new_err(err.to_string()))?;
+    }
 
     pkcs7
         .verify(

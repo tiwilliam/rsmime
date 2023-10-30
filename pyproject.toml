@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "rsmime"
-version = "0.6.3"
+version = "0.6.4"
 description = "Python package for signing and verifying S/MIME messages"
 classifiers = [
     "License :: OSI Approved :: MIT License",
