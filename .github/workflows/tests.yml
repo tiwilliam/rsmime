@@ -26,8 +26,6 @@ jobs:
           python-version-file: ".python-version"
       - name: Create virtualenv
         run: python -m venv .venv
-      - name: Activate virtualenv
-        run: source .venv/bin/activate
       - name: Install dependencies
         run: .venv/bin/pip install .[dev]
       - name: Build crate

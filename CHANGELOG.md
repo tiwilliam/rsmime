@@ -1,3 +1,9 @@
+## Unreleased
+
+Released XXXX-XX-XX
+
+* [#3](https://github.com/tiwilliam/rsmime/pull/3) - Replace black with ruff for formatting.
+
 ## 0.6.4
 
 Released 2023-10-30
