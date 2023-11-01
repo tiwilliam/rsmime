@@ -29,9 +29,9 @@ jobs:
       - name: Activate virtualenv
         run: source .venv/bin/activate
       - name: Install dependencies
-        run: pip install .[dev]
+        run: .venv/bin/pip install .[dev]
       - name: Build crate
-        run: maturin develop
+        run: .venv/bin/maturin develop
       - name: Verify ruff format
         run: .venv/bin/ruff format --check .
       - name: Verify ruff check
@@ -39,4 +39,4 @@ jobs:
       - name: Verify cargo fmt
         run: cargo fmt --check
       - name: Run tests
-        run: pytest -vv
+        run: .venv/bin/pytest -vv
