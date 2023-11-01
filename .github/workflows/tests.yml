@@ -32,5 +32,11 @@ jobs:
         run: pip install .[dev]
       - name: Build crate
         run: maturin develop
+      - name: Verify ruff format
+        run: .venv/bin/ruff format --check .
+      - name: Verify ruff check
+        run: .venv/bin/ruff check .
+      - name: Verify cargo fmt
+        run: cargo fmt --check
       - name: Run tests
-        run: pytest
+        run: pytest -vv

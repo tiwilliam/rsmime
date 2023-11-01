@@ -21,6 +21,13 @@ commands:
     tasks:
       - run: maturin develop  --release --strip
       - run: pytest -vv
+    
+  format:
+    description: Format code
+    tasks:
+      - run: cargo fmt
+      - run: ruff check --fix .
+      - run: ruff format .
 
   docs:
     description: Serve and watch documentation for development
