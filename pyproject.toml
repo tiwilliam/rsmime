@@ -24,6 +24,7 @@ dev = [
     "mkdocs-autorefs==0.5.0",
     "mkdocs-material==9.4.7",
     "mkdocstrings[python]==0.23.0",
+    "setuptools",
     "pytest==7.4.3",
     "ruff==0.1.3",
 ]
