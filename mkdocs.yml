@@ -33,6 +33,8 @@ plugins:
         python:
           paths: [python]
           options:
+            allow_inspection: true
+            load_external_modules: true
             heading_level: 3
             show_source: false
             docstring_section_style: list
