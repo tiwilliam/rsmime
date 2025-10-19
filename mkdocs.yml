@@ -35,6 +35,8 @@ plugins:
           options:
             allow_inspection: true
             load_external_modules: true
+            preload_modules:
+              - rsmime.rsmime
             heading_level: 3
             show_source: false
             docstring_section_style: list
