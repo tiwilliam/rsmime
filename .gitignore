@@ -1,5 +1,6 @@
 /site
 /target
 /.shadowenv.d
+.venv/
 *.so
 __pycache__/

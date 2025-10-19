@@ -1,13 +1,25 @@
+from os import PathLike
+
 class Rsmime:
-    def __init__(self, cert_file: str, key_file: str) -> None:
-        """Initialize client and load certificate from disk.
+    def __init__(
+        self,
+        cert_file: str | PathLike[str] | None = ...,
+        key_file: str | PathLike[str] | None = ...,
+        *,
+        cert_data: str | bytes | None = ...,
+        key_data: str | bytes | None = ...,
+    ) -> None:
+        """Initialize client and load certificate material.
 
         Parameters:
-            cert_file: Path to certificate on disk.
-            key_file: Path to private key on disk.
+            cert_file: Path to certificate on disk. Mutually exclusive with ``cert_data``.
+            key_file: Path to private key on disk. Mutually exclusive with ``key_data``.
+            cert_data: PEM-encoded certificate contents provided as a string or bytes.
+            key_data: PEM-encoded private key contents provided as a string or bytes.
 
         Raises:
-            exceptions.CertificateError: If there is an error reading the certificate or key.
+            exceptions.CertificateError: If there is an error loading, parsing, or when
+                both a file path and in-memory value are provided for the same artifact.
         """
         ...
     def sign(self, message: bytes, *, detached: bool = False) -> bytes:
