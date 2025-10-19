@@ -14,7 +14,7 @@ use openssl::x509::{X509Ref, X509};
 use pyo3::create_exception;
 use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
-use pyo3::types::PyBytes;
+use pyo3::types::{PyBytes, PyModule};
 use pyo3::wrap_pymodule;
 
 fn _sign(
@@ -108,7 +108,7 @@ fn material_from_sources(
             std::fs::read(path).map_err(|err| CertificateError::new_err(err.to_string()))
         }
         (None, Some(obj)) => {
-            let obj = obj.as_ref(py);
+            let obj = obj.bind(py);
 
             if let Ok(value) = obj.extract::<&str>() {
                 Ok(value.as_bytes().to_vec())
@@ -130,7 +130,7 @@ fn material_from_sources(
 }
 
 #[pymodule]
-fn exceptions(py: Python, m: &PyModule) -> PyResult<()> {
+fn exceptions(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("RsmimeError", py.get_type::<RsmimeError>())?;
     m.add("CertificateError", py.get_type::<CertificateError>())?;
     m.add(
@@ -143,14 +143,16 @@ fn exceptions(py: Python, m: &PyModule) -> PyResult<()> {
 }
 
 #[pymodule]
-fn rsmime(py: Python, m: &PyModule) -> PyResult<()> {
+fn rsmime(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     let exceptions = wrap_pymodule!(exceptions);
 
     py.import("sys")?
         .getattr("modules")?
         .set_item("rsmime.exceptions", exceptions(py))?;
 
-    m.add_wrapped(exceptions)?;
+    let exc_py = exceptions(py);
+    let exc_bound = exc_py.bind(py);
+    m.add_submodule(&exc_bound)?;
     m.add_class::<Rsmime>()?;
 
     Ok(())
@@ -191,7 +193,7 @@ impl Rsmime {
 
     #[staticmethod]
     #[pyo3(signature = (message, *, raise_on_expired = false))]
-    fn verify(py_: Python<'_>, message: Vec<u8>, raise_on_expired: bool) -> PyResult<PyObject> {
+    fn verify(py_: Python<'_>, message: Vec<u8>, raise_on_expired: bool) -> PyResult<Py<PyAny>> {
         match _verify(&message, raise_on_expired) {
             Ok(data) => Ok(PyBytes::new(py_, &data).into()),
             Err(err) => Err(err),
@@ -199,7 +201,7 @@ impl Rsmime {
     }
 
     #[pyo3(signature = (message, *, detached = false))]
-    fn sign(self_: PyRef<'_, Self>, message: Vec<u8>, detached: bool) -> PyResult<PyObject> {
+    fn sign(self_: PyRef<'_, Self>, message: Vec<u8>, detached: bool) -> PyResult<Py<PyAny>> {
         match _sign(
             self_.stack.as_ref(),
             self_.cert.as_ref(),

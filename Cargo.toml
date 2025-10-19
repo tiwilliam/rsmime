@@ -9,7 +9,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 openssl = { version = "0.10", features = ["vendored"] }
-pyo3 = { version = "0.20", features = ["extension-module"] }
+pyo3 = { version = "0.26", features = ["extension-module"] }
 
 
 [features]
