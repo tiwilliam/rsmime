@@ -2,7 +2,12 @@
 
 Released XXXX-XX-XX
 
+## 0.7.0
+
+Released 2025-10-19
+
 * [#3](https://github.com/tiwilliam/rsmime/pull/3) - Replace black with ruff for formatting.
+* [#4](https://github.com/tiwilliam/rsmime/pull/4) - Introduce ``cert_data`` and ``key_data`` options for supplying certificate material without temporary files.
 
 ## 0.6.4
 

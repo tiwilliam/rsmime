@@ -23,6 +23,29 @@ except (SignError, CertificateError) as e:
     print("Failed to sign:", e)
 ```
 
+If you already have the PEM data in memory you can also provide it directly as text or
+bytes-like objects:
+
+```python
+from pathlib import Path
+from rsmime import Rsmime
+
+certificate = Path("some.crt").read_text()
+private_key = Path("some.key").read_text()
+
+client = Rsmime(cert_data=certificate, key_data=private_key)
+
+certificate_bytes = Path("some.crt").read_bytes()
+private_key_bytes = Path("some.key").read_bytes()
+
+client = Rsmime(cert_data=certificate_bytes, key_data=private_key_bytes)
+
+client = Rsmime(
+    cert_data=bytearray(Path("some.crt").read_bytes()),
+    key_data=bytearray(Path("some.key").read_bytes()),
+)
+```
+
 ### Output
 
 ```bash

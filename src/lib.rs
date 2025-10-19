@@ -1,6 +1,7 @@
 extern crate openssl;
 
 use std::io::{Error, ErrorKind};
+use std::path::PathBuf;
 
 use openssl::nid::Nid;
 use openssl::pkcs7::{Pkcs7, Pkcs7Flags};
@@ -95,6 +96,39 @@ create_exception!(exceptions, CertificateExpiredError, CertificateError);
 create_exception!(exceptions, SignError, RsmimeError);
 create_exception!(exceptions, VerifyError, RsmimeError);
 
+fn material_from_sources(
+    py: Python<'_>,
+    file: Option<PathBuf>,
+    data: Option<Py<PyAny>>,
+    file_label: &str,
+    data_label: &str,
+) -> PyResult<Vec<u8>> {
+    match (file, data) {
+        (Some(path), None) => {
+            std::fs::read(path).map_err(|err| CertificateError::new_err(err.to_string()))
+        }
+        (None, Some(obj)) => {
+            let obj = obj.as_ref(py);
+
+            if let Ok(value) = obj.extract::<&str>() {
+                Ok(value.as_bytes().to_vec())
+            } else if let Ok(value) = obj.extract::<Vec<u8>>() {
+                Ok(value)
+            } else {
+                Err(CertificateError::new_err(format!(
+                    "{data_label} must be a str or bytes-like object"
+                )))
+            }
+        }
+        (Some(_), Some(_)) => Err(CertificateError::new_err(format!(
+            "Provide either {file_label} or {data_label}, not both"
+        ))),
+        (None, None) => Err(CertificateError::new_err(format!(
+            "A value must be provided via {file_label} or {data_label}"
+        ))),
+    }
+}
+
 #[pymodule]
 fn exceptions(py: Python, m: &PyModule) -> PyResult<()> {
     m.add("RsmimeError", py.get_type::<RsmimeError>())?;
@@ -132,20 +166,23 @@ struct Rsmime {
 #[pymethods]
 impl Rsmime {
     #[new]
-    #[pyo3(signature = (cert_file, key_file))]
-    fn new(cert_file: String, key_file: String) -> PyResult<Self> {
+    #[pyo3(signature = (cert_file=None, key_file=None, *, cert_data=None, key_data=None))]
+    fn new(
+        py: Python<'_>,
+        cert_file: Option<PathBuf>,
+        key_file: Option<PathBuf>,
+        cert_data: Option<Py<PyAny>>,
+        key_data: Option<Py<PyAny>>,
+    ) -> PyResult<Self> {
         let stack = Stack::new().unwrap();
 
-        let cert_data =
-            std::fs::read(cert_file).map_err(|err| CertificateError::new_err(err.to_string()))?;
+        let cert_bytes = material_from_sources(py, cert_file, cert_data, "cert_file", "cert_data")?;
+        let key_bytes = material_from_sources(py, key_file, key_data, "key_file", "key_data")?;
 
-        let cert =
-            X509::from_pem(&cert_data).map_err(|err| CertificateError::new_err(err.to_string()))?;
+        let cert = X509::from_pem(&cert_bytes)
+            .map_err(|err| CertificateError::new_err(err.to_string()))?;
 
-        let key_data =
-            std::fs::read(key_file).map_err(|err| CertificateError::new_err(err.to_string()))?;
-
-        let rsa = Rsa::private_key_from_pem(&key_data)
+        let rsa = Rsa::private_key_from_pem(&key_bytes)
             .map_err(|err| CertificateError::new_err(err.to_string()))?;
         let pkey = PKey::from_rsa(rsa).map_err(|err| CertificateError::new_err(err.to_string()))?;
 
