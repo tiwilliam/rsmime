@@ -1,6 +1,44 @@
+from pathlib import Path
+
 import pytest
 from callee import strings
+
 from rsmime import Rsmime, exceptions
+
+
+ATTACHED_SIGNATURE_REGEX = strings.Regex(
+    b"MIME-Version: 1.0\n"
+    b"Content-Disposition: attachment; filename=\"smime.p7m\"\n"
+    b"Content-Type: application/x-pkcs7-mime; smime-type=signed-data; name=\"smime.p7m\"\n"
+    b"Content-Transfer-Encoding: base64\n"
+    b"\n"
+    b"MIIJwQYJKoZIhvcNAQcCoIIJsjCCCa4CAQExDzANBglghkgBZQMEAgEFADASBgkq\n"
+    b"[A-Za-z0-9/+=\n]+\n"
+    b"\n"
+)
+
+DETACHED_SIGNATURE_REGEX = strings.Regex(
+    b"MIME-Version: 1.0\n"
+    b"Content-Type: multipart/signed; protocol=\"application/x-pkcs7-signature\"; micalg=\"sha-256\"; boundary=\"----[A-Z0-9]+\"\n\n"
+    b"This is an S/MIME signed message\n\n"
+    b"------[A-Z0-9]+\n"
+    b"abc\n"
+    b"------[A-Z0-9]+\n"
+    b"Content-Type: application/x-pkcs7-signature; name=\"smime.p7s\"\n"
+    b"Content-Transfer-Encoding: base64\n"
+    b"Content-Disposition: attachment; filename=\"smime.p7s\"\n"
+    b"\n"
+    b"MIIJugYJKoZIhvcNAQcCoIIJqzCCCacCAQExDzANBglghkgBZQMEAgEFADALBgkq\n"
+    b"[A-Za-z0-9/+=\n]+\n"
+    b"\n"
+    b"------[A-Z0-9]+--\n"
+    b"\n"
+)
+
+
+def _load_text(path: str) -> str:
+    return Path(path).read_text()
+
 
 working_client = Rsmime('tests/data/certificate.crt', 'tests/data/certificate.key')
 expired_client = Rsmime('tests/data/expired.crt', 'tests/data/certificate.key')
@@ -9,36 +47,21 @@ expired_client = Rsmime('tests/data/expired.crt', 'tests/data/certificate.key')
 class TestRsmime:
     def test_sign(self):
         signed_data = working_client.sign(b'abc')
-        assert signed_data == strings.Regex(
-            b'MIME-Version: 1.0\n'
-            b'Content-Disposition: attachment; filename="smime.p7m"\n'
-            b'Content-Type: application/x-pkcs7-mime; smime-type=signed-data; name="smime.p7m"\n'
-            b'Content-Transfer-Encoding: base64\n'
-            b'\n'
-            b'MIIJwQYJKoZIhvcNAQcCoIIJsjCCCa4CAQExDzANBglghkgBZQMEAgEFADASBgkq\n'
-            b'[A-Za-z0-9/+=\n]+\n'
-            b'\n'
-        )
+        assert signed_data == ATTACHED_SIGNATURE_REGEX
 
     def test_sign_detached(self):
         signed_data = working_client.sign(b'abc', detached=True)
-        assert signed_data == strings.Regex(
-            b'MIME-Version: 1.0\n'
-            b'Content-Type: multipart/signed; protocol="application/x-pkcs7-signature"; micalg="sha-256"; boundary="----[A-Z0-9]+"\n\n'
-            b'This is an S/MIME signed message\n\n'
-            b'------[A-Z0-9]+\n'
-            b'abc\n'
-            b'------[A-Z0-9]+\n'
-            b'Content-Type: application/x-pkcs7-signature; name="smime.p7s"\n'
-            b'Content-Transfer-Encoding: base64\n'
-            b'Content-Disposition: attachment; filename="smime.p7s"\n'
-            b'\n'
-            b'MIIJugYJKoZIhvcNAQcCoIIJqzCCCacCAQExDzANBglghkgBZQMEAgEFADALBgkq\n'
-            b'[A-Za-z0-9/+=\n]+\n'
-            b'\n'
-            b'------[A-Z0-9]+--\n'
-            b'\n'
+        assert signed_data == DETACHED_SIGNATURE_REGEX
+
+    def test_sign_with_in_memory_material(self):
+        client = Rsmime(
+            cert_data=_load_text('tests/data/certificate.crt'),
+            key_data=_load_text('tests/data/certificate.key'),
         )
+
+        signed_data = client.sign(b'abc')
+
+        assert signed_data == ATTACHED_SIGNATURE_REGEX
 
     def test_sign_missing_cert(self):
         with pytest.raises(
@@ -63,6 +86,42 @@ class TestRsmime:
     def test_sign_empty_data(self):
         with pytest.raises(exceptions.SignError, match='Cannot sign empty data'):
             working_client.sign(b'')
+
+    def test_conflicting_certificate_inputs(self):
+        with pytest.raises(
+            exceptions.CertificateError,
+            match='Provide either cert_file or cert_data',
+        ):
+            Rsmime(
+                'tests/data/certificate.crt',
+                'tests/data/certificate.key',
+                cert_data=_load_text('tests/data/certificate.crt'),
+            )
+
+    def test_conflicting_key_inputs(self):
+        with pytest.raises(
+            exceptions.CertificateError,
+            match='Provide either key_file or key_data',
+        ):
+            Rsmime(
+                'tests/data/certificate.crt',
+                'tests/data/certificate.key',
+                key_data=_load_text('tests/data/certificate.key'),
+            )
+
+    def test_missing_certificate_input(self):
+        with pytest.raises(
+            exceptions.CertificateError,
+            match='cert_file or cert_data',
+        ):
+            Rsmime(key_data=_load_text('tests/data/certificate.key'))
+
+    def test_missing_key_input(self):
+        with pytest.raises(
+            exceptions.CertificateError,
+            match='key_file or key_data',
+        ):
+            Rsmime(cert_data=_load_text('tests/data/certificate.crt'))
 
     def test_verify(self):
         data = b'abc'

@@ -132,20 +132,53 @@ struct Rsmime {
 #[pymethods]
 impl Rsmime {
     #[new]
-    #[pyo3(signature = (cert_file, key_file))]
-    fn new(cert_file: String, key_file: String) -> PyResult<Self> {
+    #[pyo3(signature = (cert_file=None, key_file=None, *, cert_data=None, key_data=None))]
+    fn new(
+        cert_file: Option<String>,
+        key_file: Option<String>,
+        cert_data: Option<String>,
+        key_data: Option<String>,
+    ) -> PyResult<Self> {
         let stack = Stack::new().unwrap();
 
-        let cert_data =
-            std::fs::read(cert_file).map_err(|err| CertificateError::new_err(err.to_string()))?;
+        let cert_bytes = match (cert_file, cert_data) {
+            (Some(path), None) => {
+                std::fs::read(path).map_err(|err| CertificateError::new_err(err.to_string()))?
+            }
+            (None, Some(data)) => data.into_bytes(),
+            (Some(_), Some(_)) => {
+                return Err(CertificateError::new_err(
+                    "Provide either cert_file or cert_data, not both",
+                ))
+            }
+            (None, None) => {
+                return Err(CertificateError::new_err(
+                    "A certificate must be provided via cert_file or cert_data",
+                ))
+            }
+        };
 
-        let cert =
-            X509::from_pem(&cert_data).map_err(|err| CertificateError::new_err(err.to_string()))?;
+        let key_bytes = match (key_file, key_data) {
+            (Some(path), None) => {
+                std::fs::read(path).map_err(|err| CertificateError::new_err(err.to_string()))?
+            }
+            (None, Some(data)) => data.into_bytes(),
+            (Some(_), Some(_)) => {
+                return Err(CertificateError::new_err(
+                    "Provide either key_file or key_data, not both",
+                ))
+            }
+            (None, None) => {
+                return Err(CertificateError::new_err(
+                    "A private key must be provided via key_file or key_data",
+                ))
+            }
+        };
 
-        let key_data =
-            std::fs::read(key_file).map_err(|err| CertificateError::new_err(err.to_string()))?;
+        let cert = X509::from_pem(&cert_bytes)
+            .map_err(|err| CertificateError::new_err(err.to_string()))?;
 
-        let rsa = Rsa::private_key_from_pem(&key_data)
+        let rsa = Rsa::private_key_from_pem(&key_bytes)
             .map_err(|err| CertificateError::new_err(err.to_string()))?;
         let pkey = PKey::from_rsa(rsa).map_err(|err| CertificateError::new_err(err.to_string()))?;
 
